@@ -1,0 +1,64 @@
+<project xmlns:ivy="antlib:org.apache.ivy.ant" name="Mapping_Reader" default="deploy" basedir=".">
+
+	<loadproperties srcfile="build.properties" />
+	<property name="build.dir" location="build" />
+	<property name="build.class.dir" location="${build.dir}/class" />
+	<property name="build.lib.dir" location="${build.dir}/lib" />
+	<property name="build.deploy.dir" location="${build.dir}/deploy" />
+
+	<target name="init">
+		<mkdir dir="${build.class.dir}" />
+		<mkdir dir="${build.lib.dir}" />
+		<mkdir dir="${build.deploy.dir}" />
+	</target>
+
+	<target name="load-ivy">
+		<path id="ivy.lib.path">
+			<fileset dir="${extra.lib.dir}" includes="*.jar" />
+		</path>
+		<taskdef resource="org/apache/ivy/ant/antlib.xml" uri="antlib:org.apache.ivy.ant" classpathref="ivy.lib.path" />
+	</target>
+
+	<target name="resolve" depends="clean-lib, load-ivy">
+		<ivy:resolve file="${ivy.file}" />
+		<ivy:retrieve pattern="${build.lib.dir}/[artifact]-[revision].[ext]"/>
+	</target>
+
+	<target name="clean-lib">
+		<delete includeemptydirs="true" dir="${build.lib.dir}" />
+	</target>
+
+	<target name="build" depends="resolve">
+		<javac srcdir="src" destdir="${build.class.dir}" debug="on" encoding="UTF-8">
+			<classpath>
+				<fileset dir="${build.lib.dir}" includes="**/*.jar" />
+			</classpath>
+		</javac>
+	</target>
+
+	<target name="deploy" depends="build">
+		<path id="libraries.path">
+			<fileset dir="${build.deploy.dir}/lib">
+				<include name="*.jar"/>
+			</fileset>
+		</path>
+
+		<manifestclasspath property="manifest.classpath" jarfile="${build.deploy.dir}/MappingReader.jar">
+			<classpath refid="libraries.path"/>
+		</manifestclasspath>
+
+		<jar destfile="${build.deploy.dir}/MappingReader.jar">
+			<fileset dir="${build.class.dir}" includes="**/*.class"/>
+			<manifest>
+				<attribute name="Main-Class" value="Main"/>
+                <attribute name="Class-Path" value="${manifest.classpath}"/>
+			</manifest>
+		</jar>
+		<mkdir dir="${build.deploy.dir}/lib"/>
+		<copy todir="${build.deploy.dir}/lib">
+			<fileset dir="${extra.lib.dir}" includes="*.jar" excludes="ivy-*.jar"/>
+			<fileset dir="${build.lib.dir}" includes="*.jar"/>
+		</copy>
+	</target>
+
+</project>
